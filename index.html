@@ -1,1156 +1,531 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Indiana SBDC Industry Cluster Dashboard</title>
-    <!-- Tailwind CSS with Dark Mode Class Strategy -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class'
-        }
-    </script>
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- PapaParse for high-performance CSV parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <!-- Lucide Icons CDN -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Premium Font Family from Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            transition: background-color 0.25s ease, color 0.25s ease;
-        }
-        /* Custom scrollbar matching premium theme styles */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .dark ::-webkit-scrollbar-thumb {
-            background: #CFB991;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Central Indiana SBDC — Industry Cluster Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#CFB991;      /* Boilermaker Gold */
+  --rush:#DAAA00;      /* Rush */
+  --field:#DDB945;
+  --dust:#EBD99F;
+  --aged:#8E6F3E;
+  --steel:#555960;
+  --coolgray:#6F727B;
+  --steam:#C4BFC0;
+  --black:#000000;
+  --paper:#F7F5F1;
+  --line:#DEDAD2;
+  --ink:#1C1C1C;
+  --star:#DAAA00;
+  --emerging:#8E6F3E;
+  --mature:#555960;
+  --transforming:#C4BFC0;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Source Sans 3",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  font-size:16px;line-height:1.5;font-variant-numeric:tabular-nums;
+}
+h1,h2,h3,th,.num,.stat-value,.chip,.badge,button,select{font-family:"Archivo Narrow","Arial Narrow",Helvetica,sans-serif}
+:focus-visible{outline:3px solid var(--rush);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+
+/* ---------- Masthead ---------- */
+.masthead{background:var(--black);color:#fff;border-bottom:4px solid var(--gold)}
+.masthead .wrap{display:flex;flex-wrap:wrap;gap:18px 28px;align-items:flex-end;padding-top:26px;padding-bottom:22px}
+.mark{font-family:"Archivo Narrow",sans-serif;font-weight:700;font-size:15px;letter-spacing:.14em;color:var(--gold);line-height:1;margin:0 0 10px}
+h1{font-size:clamp(28px,4.4vw,44px);font-weight:700;line-height:1.02;margin:0;letter-spacing:-.01em}
+h1 span{display:block;color:var(--gold);font-weight:500;font-size:.52em;letter-spacing:.02em;margin-top:8px}
+.masthead p{margin:0;max-width:44ch;color:var(--steam);font-size:15px}
+.scope{margin-left:auto;border-left:2px solid var(--aged);padding-left:16px}
+.scope dt{font-size:12px;letter-spacing:.12em;color:var(--gold);font-family:"Archivo Narrow",sans-serif}
+.scope dd{margin:2px 0 10px;font-size:17px;font-weight:600;color:#fff}
+.scope dd:last-child{margin-bottom:0}
+
+/* ---------- Controls ---------- */
+.controls{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.controls .wrap{display:grid;grid-template-columns:minmax(200px,1.3fr) auto auto;gap:16px 24px;align-items:end;padding:14px 20px}
+.field label{display:block;font-family:"Archivo Narrow",sans-serif;font-size:13px;letter-spacing:.08em;color:var(--steel);margin-bottom:5px}
+.search{position:relative}
+.search input{width:100%;padding:9px 34px 9px 12px;border:1.5px solid var(--line);border-radius:2px;background:var(--paper);font:inherit;font-size:15px}
+.search input:focus{border-color:var(--aged);background:#fff}
+.search .clear{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--coolgray);font-size:18px;line-height:1;cursor:pointer;padding:4px 8px;display:none}
+.search input:not(:placeholder-shown)+.clear{display:block}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:#fff;color:var(--steel);
+  padding:7px 12px;border-radius:2px;font-size:14px;font-weight:600;letter-spacing:.03em;cursor:pointer}
+.chip .dot{width:9px;height:9px;border-radius:50%;background:var(--swatch,var(--steel))}
+.chip[aria-pressed="true"]{border-color:var(--black);background:var(--black);color:#fff}
+.chip .n{color:var(--coolgray);font-weight:500}
+.chip[aria-pressed="true"] .n{color:var(--gold)}
+.slider{min-width:190px}
+.slider input{width:100%;accent-color:var(--aged);margin:6px 0 0}
+.slider .val{font-weight:600;color:var(--ink)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1.5px solid var(--black);background:#fff;color:var(--black);padding:8px 14px;border-radius:2px;
+  font-size:14px;font-weight:600;letter-spacing:.04em;cursor:pointer}
+.btn:hover{background:var(--dust)}
+.btn-primary{background:var(--black);color:var(--gold)}
+.btn-primary:hover{background:var(--aged);color:#fff;border-color:var(--aged)}
+
+/* ---------- Stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin:26px 0 0}
+.stat{background:#fff;padding:14px 16px}
+.stat dt{font-family:"Archivo Narrow",sans-serif;font-size:12.5px;letter-spacing:.09em;color:var(--steel);margin:0}
+.stat-value{display:block;font-size:26px;font-weight:700;line-height:1.15;margin-top:3px}
+.stat small{display:block;color:var(--coolgray);font-size:13px}
+
+/* ---------- Quadrant map ---------- */
+.map{background:var(--black);color:#fff;margin-top:26px;border-top:3px solid var(--gold);padding:20px 20px 8px}
+.map header{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:baseline;margin-bottom:6px}
+.map h2{margin:0;font-size:20px;font-weight:600;color:#fff}
+.map p{margin:0;color:var(--steam);font-size:14px;max-width:62ch}
+.map figure{margin:0}
+svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.pt{cursor:pointer}
+.pt circle{stroke:var(--black);stroke-width:1}
+.pt:hover circle,.pt.active circle{stroke:#fff;stroke-width:2.5}
+.pt.dim{opacity:.16}
+.axis-line{stroke:var(--steel);stroke-width:1}
+.center-line{stroke:var(--gold);stroke-width:1.25;stroke-dasharray:5 4}
+.qlabel{fill:var(--coolgray);font-family:"Archivo Narrow",sans-serif;font-size:13px;letter-spacing:.1em}
+.atitle{fill:var(--gold);font-family:"Archivo Narrow",sans-serif;font-size:13px}
+.atick{fill:var(--coolgray);font-size:11.5px;font-family:"Source Sans 3",sans-serif}
+.plabel{fill:#fff;font-size:12px;font-family:"Source Sans 3",sans-serif;pointer-events:none}
+
+/* ---------- Table ---------- */
+.tablecard{background:#fff;border:1px solid var(--line);border-top:3px solid var(--black);margin:26px 0 40px}
+.tablebar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;padding:12px 16px;border-bottom:1px solid var(--line)}
+.tablebar h2{margin:0;font-size:19px;font-weight:600}
+.tablebar .hint{color:var(--coolgray);font-size:13.5px;margin-left:auto}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:900px}
+thead th{position:sticky;top:var(--ctrlH,66px);z-index:10;background:var(--black);color:#fff;text-align:left;
+  font-size:13.5px;font-weight:600;letter-spacing:.06em;padding:0;border-bottom:2px solid var(--gold)}
+thead th button{width:100%;background:none;border:0;color:inherit;font:inherit;letter-spacing:inherit;
+  padding:11px 12px;text-align:inherit;cursor:pointer;display:flex;gap:6px;align-items:center;justify-content:inherit}
+thead th button:hover{color:var(--rush)}
+th.r,td.r{text-align:right}
+th.r button{justify-content:flex-end}
+.arrow{color:var(--rush);font-size:11px;visibility:hidden}
+th[aria-sort] .arrow{visibility:visible}
+tbody tr.row{border-bottom:1px solid var(--line);cursor:pointer}
+tbody tr.row:nth-child(4n+1){background:#FBFAF7}
+tbody tr.row:hover{background:var(--dust)}
+tbody tr.row.active{background:var(--dust);box-shadow:inset 3px 0 0 var(--rush)}
+td{padding:9px 12px;font-size:15px;vertical-align:middle}
+td.name{font-weight:600;line-height:1.25}
+td.name .cid{display:block;font-family:"Archivo Narrow",sans-serif;font-weight:500;font-size:12.5px;
+  letter-spacing:.1em;color:var(--aged)}
+.num{font-size:15.5px;font-weight:600}
+.money{color:var(--ink)}
+.badge{display:inline-block;padding:3px 9px;border-radius:2px;font-size:13px;font-weight:600;letter-spacing:.05em;
+  border:1.5px solid var(--b,var(--steel));color:var(--ink);background:var(--bg,transparent)}
+.lqcell{display:flex;align-items:center;justify-content:flex-end;gap:10px}
+.lqbar-wrap{position:relative;width:192px;height:16px;flex:none}
+.lqbar-wrap .mid{position:absolute;left:50%;top:-2px;bottom:-2px;border-left:1.5px solid var(--gold)}
+.lqbar-wrap i{position:absolute;top:2px;bottom:2px}
+.chg{font-weight:700}
+.chg.up{color:#6B6021}
+.chg.dn{color:#7A3E1D}
+.chg .tri{font-size:11px}
+tr.detail>td{padding:0;border-bottom:1px solid var(--line);background:#FBFAF7}
+.panel{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px 26px;padding:16px 18px 18px;border-left:3px solid var(--rush)}
+.panel h3{grid-column:1/-1;margin:0;font-size:16px;font-weight:600}
+.panel .kv dt{font-family:"Archivo Narrow",sans-serif;font-size:12.5px;letter-spacing:.08em;color:var(--steel)}
+.panel .kv dd{margin:1px 0 0;font-size:16px;font-weight:600}
+.panel .kv dd em{font-style:normal;font-weight:400;color:var(--coolgray);font-size:14px}
+.empty{padding:44px 20px;text-align:center}
+.empty strong{display:block;font-family:"Archivo Narrow",sans-serif;font-size:19px;margin-bottom:4px}
+.empty p{margin:0 0 14px;color:var(--steel)}
+.legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin-left:auto;font-size:13px;color:var(--steam)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+footer{border-top:1px solid var(--line);padding:18px 0 46px;color:var(--steel);font-size:13.5px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:6px 22px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+@media (max-width:900px){
+  .controls .wrap{grid-template-columns:1fr;gap:12px}
+  .controls{position:static}
+  thead th{top:0}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .scope{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:no-preference){
+  .btn,.chip,tbody tr.row,.pt circle{transition:background-color .15s ease,color .15s ease,opacity .15s ease,stroke-width .15s ease}
+}
+@media print{
+  .controls,.map,.actions{display:none}
+  body{background:#fff}
+}
+</style>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-[#0b1329] dark:text-[#f8fafc] min-h-screen pb-12 transition-colors">
-    <!-- Header -->
-    <header class="bg-white dark:bg-[#070d19] border-b-4 border-[#CFB991] px-6 py-5 shadow-lg transition-colors">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3">
-                <span class="p-2 bg-[#CFB991]/15 rounded-lg text-[#C28E0E] dark:text-[#CFB991] border border-[#CFB991]/30">
-                    <i data-lucide="bar-chart-3" class="w-8 h-8"></i>
-                </span>
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-[#f8fafc]">
-                        Indiana SBDC <span class="text-[#C28E0E] dark:text-[#CFB991]">Industry Cluster</span> Dashboard
-                    </h1>
-                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                        Economic Specialization, Job Growth, and Competitiveness Analysis
-                    </p>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <!-- Theme Switcher Button in Top Right Corner - Default Light Mode -->
-                <button id="themeToggle" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-[#111c30] dark:hover:bg-[#1a293f] text-slate-800 dark:text-slate-200 px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 transition-colors shadow-sm select-none">
-                    <span class="dark:hidden flex items-center gap-2 font-semibold text-xs">
-                        <i data-lucide="moon" class="w-4.5 h-4.5 text-slate-600"></i> Dark Mode
-                    </span>
-                    <span class="hidden dark:flex items-center gap-2 font-semibold text-xs">
-                        <i data-lucide="sun" class="w-4.5 h-4.5 text-[#CFB991]"></i> Light Mode
-                    </span>
-                </button>
+<body>
 
-                <div class="flex items-center gap-2 bg-slate-100 dark:bg-[#111c30] px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
-                    <span class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
-                    <span class="text-xs text-slate-600 dark:text-slate-300 font-semibold">Interactive Data Active</span>
-                </div>
-            </div>
-        </div>
+<header class="masthead">
+  <div class="wrap">
+    <div>
+      <p class="mark">PURDUE UNIVERSITY &nbsp;·&nbsp; INDIANA SBDC</p>
+      <h1>Industry cluster comparison<span>Central Indiana SBDC region</span></h1>
+    </div>
+    <dl class="scope">
+      <dt>REGION</dt><dd>Central IN SBDC</dd>
+      <dt>CLUSTERS</dt><dd>21 of 21 statewide</dd>
+      <dt>REFERENCE YEAR</dt><dd>2025</dd>
+    </dl>
+  </div>
+</header>
+
+<section class="controls" aria-label="Table filters">
+  <div class="wrap">
+    <div class="field search">
+      <label for="q">Find a cluster</label>
+      <input id="q" type="search" placeholder="Search by name or cluster ID" autocomplete="off">
+      <button class="clear" id="clearQ" type="button" aria-label="Clear search">&times;</button>
+    </div>
+    <div class="field">
+      <label id="clsLabel">Competitiveness</label>
+      <div class="chips" id="chips" role="group" aria-labelledby="clsLabel"></div>
+    </div>
+    <div class="field slider">
+      <label for="minJobs">Minimum jobs <span class="val" id="minJobsVal">0</span></label>
+      <input id="minJobs" type="range" min="0" max="225000" step="500" value="0">
+    </div>
+  </div>
+</section>
+
+<main class="wrap">
+
+  <dl class="stats" id="stats">
+    <div class="stat"><dt>CLUSTERS SHOWN</dt><dd class="stat-value" id="s1">21</dd></div>
+    <div class="stat"><dt>TOTAL JOBS</dt><dd class="stat-value" id="s2">—</dd><small id="s2b"></small></div>
+    <div class="stat"><dt>AVERAGE EARNINGS PER WORKER</dt><dd class="stat-value" id="s3">—</dd><small>Weighted by jobs</small></div>
+    <div class="stat"><dt>ESTABLISHMENTS</dt><dd class="stat-value" id="s4">—</dd><small id="s4b"></small></div>
+  </dl>
+
+  <section class="map" aria-labelledby="mapH">
+    <header>
+      <h2 id="mapH">Concentration and momentum</h2>
+      <p>Each cluster sits at its 2025 employment concentration and its change since 2020. Bubble size is jobs. Select a bubble to open that row.</p>
+      <div class="legend" id="legend"></div>
     </header>
+    <figure>
+      <svg id="plot" viewBox="0 0 980 470" role="img" aria-labelledby="plotTitle">
+        <title id="plotTitle">Scatter plot of employment concentration versus change in concentration for Central Indiana industry clusters</title>
+      </svg>
+    </figure>
+  </section>
 
-    <main class="max-w-7xl mx-auto px-4 md:px-6 mt-8 space-y-8">
-        <!-- SBDC Playbook & Text Insights Panel -->
-        <div class="bg-white dark:bg-[#111c30] rounded-xl p-6 border border-slate-200 dark:border-slate-700/60 shadow-md transition-colors">
-            <h2 class="text-lg font-bold text-[#C28E0E] dark:text-[#CFB991] flex items-center gap-2 mb-4">
-                <i data-lucide="book-open" class="w-5 h-5"></i> SBDC Executive Playbook & Regional Insights
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                <!-- Column 1 -->
-                <div class="space-y-2 border-r border-slate-200 dark:border-slate-700/50 pr-4">
-                    <h3 class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                        <i data-lucide="map-pin" class="w-4 h-4 text-emerald-500"></i> Regional Dynamics
-                    </h3>
-                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-xs">
-                        Indiana's SBDC territories demonstrate high regional specialization. While <strong>Central Indiana</strong> acts as a major service and healthcare hub (accounting for over 1 million jobs), adjacent SBDC regions are anchored strongly in manufacturing. Advisors should focus on localized supply chains specific to the region's core cluster specializations.
-                    </p>
-                </div>
-                <!-- Column 2 -->
-                <div class="space-y-2 border-r border-slate-200 dark:border-slate-700/50 pr-4">
-                    <h3 class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                        <i data-lucide="trending-up" class="w-4 h-4 text-blue-500"></i> Location Quotient (LQ)
-                    </h3>
-                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-xs">
-                        An <strong>LQ > 1.0</strong> signifies that the region has a higher concentration of employment in that cluster than the national average, indicating unique regional strengths. Sustained wages are heavily aligned with high-specialization <strong>Star</strong> clusters, offering strategic expansion and investment opportunities.
-                    </p>
-                </div>
-                <!-- Column 3 -->
-                <div class="space-y-2">
-                    <h3 class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                        <i data-lucide="help-circle" class="w-4 h-4 text-red-500"></i> Advisor Strategic Actions
-                    </h3>
-                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-xs">
-                        Identify <strong>Stars</strong> to support high-growth capital injection. Leverage up-and-coming <strong>Emerging</strong> clusters to foster entrepreneurial networks. Guide businesses in <strong>Mature</strong> sectors toward tech adoption, and help legacy firms in <strong>Transforming</strong> quadrants adapt to transitioning markets.
-                    </p>
-                </div>
-            </div>
-        </div>
+  <section class="tablecard" aria-labelledby="tblH">
+    <div class="tablebar">
+      <h2 id="tblH">Cluster detail</h2>
+      <div class="actions">
+        <button class="btn btn-primary" id="dl" type="button">Download filtered CSV</button>
+        <button class="btn" id="reset" type="button">Reset filters</button>
+      </div>
+      <p class="hint">Select any row for the full profile. Select a column heading to sort.</p>
+    </div>
+    <div class="scroll">
+      <table id="tbl">
+        <caption class="sr">Industry clusters in the Central Indiana SBDC region, 2025</caption>
+        <thead>
+          <tr id="hrow"></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" hidden>
+      <strong>No clusters match these filters</strong>
+      <p>Widen the jobs threshold or clear the search to see results again.</p>
+      <button class="btn btn-primary" type="button" onclick="document.getElementById('reset').click()">Reset filters</button>
+    </div>
+  </section>
+</main>
 
-        <!-- Filters Section -->
-        <div class="bg-white dark:bg-[#111c30] rounded-xl p-6 border border-slate-200 dark:border-slate-700/60 shadow-md transition-colors">
-            <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <i data-lucide="sliders-horizontal" class="w-4 h-4"></i> Dashboard Filters
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
-                <!-- SBDC Region Selector - Only allows a single region at a time -->
-                <div>
-                    <label for="regionFilter" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">SBDC Region (Single Selection)</label>
-                    <select id="regionFilter" class="w-full bg-slate-100 dark:bg-[#1b2b48] border border-slate-300 dark:border-slate-600 rounded-lg py-2 px-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#CFB991] focus:ring-1 focus:ring-[#CFB991] cursor-pointer transition-colors">
-                        <!-- Populated dynamically -->
-                    </select>
-                </div>
-                <!-- Competitiveness -->
-                <div>
-                    <label for="competitivenessFilter" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">Competitiveness</label>
-                    <select id="competitivenessFilter" class="w-full bg-slate-100 dark:bg-[#1b2b48] border border-slate-300 dark:border-slate-600 rounded-lg py-2 px-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#CFB991] focus:ring-1 focus:ring-[#CFB991] cursor-pointer transition-colors">
-                        <option value="all">All Levels</option>
-                        <option value="Star">Star</option>
-                        <option value="Emerging">Emerging</option>
-                        <option value="Mature">Mature</option>
-                        <option value="Transforming">Transforming</option>
-                    </select>
-                </div>
-                <!-- Search -->
-                <div>
-                    <label for="searchFilter" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">Search Clusters</label>
-                    <div class="relative">
-                        <input type="text" id="searchFilter" placeholder="Search by cluster name..." class="w-full bg-slate-100 dark:bg-[#1b2b48] border border-slate-300 dark:border-slate-600 rounded-lg py-2 pl-9 pr-3 text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-[#CFB991] focus:ring-1 focus:ring-[#CFB991] transition-colors">
-                        <span class="absolute left-3 top-2.5 text-slate-400">
-                            <i data-lucide="search" class="w-4 h-4"></i>
-                        </span>
-                    </div>
-                </div>
-                <!-- Reset Button -->
-                <div class="flex items-end">
-                    <button id="resetBtn" class="w-full bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-medium py-2 px-4 rounded-lg text-sm transition duration-150 flex items-center justify-center gap-2 transition-colors">
-                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset Filters
-                    </button>
-                </div>
-            </div>
-        </div>
+<footer>
+  <div class="wrap">
+    <span>Source: 10 SBDCs industry cluster comparison, Central IN SBDC region.</span>
+    <span>Employment concentration is a location quotient: 1.00 equals the national share.</span>
+  </div>
+</footer>
 
-        <!-- KPI Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- KPI 1 -->
-            <div class="bg-white dark:bg-[#111c30] rounded-xl p-5 border border-slate-200 dark:border-slate-700/60 shadow-md relative overflow-hidden transition-colors">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Employment</p>
-                        <h4 id="kpiJobs" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">0</h4>
-                    </div>
-                    <span class="p-2 bg-[#CFB991]/10 rounded-lg text-[#C28E0E] dark:text-[#CFB991] border border-[#CFB991]/20">
-                        <i data-lucide="users" class="w-6 h-6"></i>
-                    </span>
-                </div>
-                <div class="mt-4 flex items-center text-xs text-slate-500 dark:text-slate-400">
-                    <span>2025 Projected Jobs</span>
-                </div>
-                <div class="absolute bottom-0 left-0 right-0 h-1 bg-[#CFB991]"></div>
-            </div>
-            <!-- KPI 2 -->
-            <div class="bg-white dark:bg-[#111c30] rounded-xl p-5 border border-slate-200 dark:border-slate-700/60 shadow-md relative overflow-hidden transition-colors">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Avg Earnings per Worker</p>
-                        <h4 id="kpiEarnings" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">$0</h4>
-                    </div>
-                    <span class="p-2 bg-[#CFB991]/10 rounded-lg text-[#C28E0E] dark:text-[#CFB991] border border-[#CFB991]/20">
-                        <i data-lucide="dollar-sign" class="w-6 h-6"></i>
-                    </span>
-                </div>
-                <div class="mt-4 flex items-center text-xs text-slate-500 dark:text-slate-400">
-                    <span id="kpiEarningsSub">Weighted by Region Jobs</span>
-                </div>
-                <div class="absolute bottom-0 left-0 right-0 h-1 bg-[#CFB991]"></div>
-            </div>
-            <!-- KPI 3 -->
-            <div class="bg-white dark:bg-[#111c30] rounded-xl p-5 border border-slate-200 dark:border-slate-700/60 shadow-md relative overflow-hidden transition-colors">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Establishments</p>
-                        <h4 id="kpiEstablishments" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">0</h4>
-                    </div>
-                    <span class="p-2 bg-[#CFB991]/10 rounded-lg text-[#C28E0E] dark:text-[#CFB991] border border-[#CFB991]/20">
-                        <i data-lucide="building-2" class="w-6 h-6"></i>
-                    </span>
-                </div>
-                <div class="mt-4 flex items-center text-xs text-slate-500 dark:text-slate-400">
-                    <span>Average per Cluster Location</span>
-                </div>
-                <div class="absolute bottom-0 left-0 right-0 h-1 bg-[#CFB991]"></div>
-            </div>
-        </div>
+<script>
+const DATA = [{"id":"IC10","name":"Business, Financial Technology and Specialized Services","jobs":222829.9,"epw":94819.0,"est":14346.75,"lq20":1.0251,"lq25":0.9888,"chg":-0.035425,"cls":"Transforming"},{"id":"IC02","name":"Arts, Entertainment, Recreation and Visitor","jobs":149617.2,"epw":41993.0,"est":7311.5,"lq20":0.9721,"lq25":0.9541,"chg":-0.018542,"cls":"Transforming"},{"id":"IC09","name":"Biomedical, Biotechnical and Healthcare","jobs":138059.5,"epw":108145.0,"est":3059.5,"lq20":1.0466,"lq25":1.0982,"chg":0.049277,"cls":"Star"},{"id":"IC12","name":"Transportation and Logistics","jobs":131730.5,"epw":59896.0,"est":2516.75,"lq20":1.5318,"lq25":1.5873,"chg":0.036208,"cls":"Star"},{"id":"IC11","name":"Information Technology and Telecommunications","jobs":56080.6,"epw":127365.0,"est":5025.0,"lq20":0.9026,"lq25":0.8855,"chg":-0.018897,"cls":"Transforming"},{"id":"IC04","name":"Energy (Fossil and Renewable)","jobs":51666.3,"epw":109060.0,"est":2843.0,"lq20":0.8187,"lq25":0.8537,"chg":0.042772,"cls":"Emerging"},{"id":"IC08","name":"Defense and Security","jobs":42935.7,"epw":129788.0,"est":3586.0,"lq20":0.9507,"lq25":0.9039,"chg":-0.049197,"cls":"Transforming"},{"id":"IC05","name":"Forest and Wood Products","jobs":35619.7,"epw":113317.0,"est":1803.5,"lq20":0.9632,"lq25":1.0327,"chg":0.072096,"cls":"Star"},{"id":"IC15","name":"Printed Products, Media Creation and Distribution","jobs":32375.5,"epw":71384.0,"est":2307.75,"lq20":0.9094,"lq25":0.8916,"chg":-0.019556,"cls":"Transforming"},{"id":"IC07","name":"Education and Knowledge Creation","jobs":30569.2,"epw":58895.0,"est":1656.75,"lq20":0.662,"lq25":0.7088,"chg":0.070688,"cls":"Emerging"},{"id":"IC21","name":"Transportation Equipment Manufacturing","jobs":27264.8,"epw":136099.0,"est":1705.0,"lq20":1.223,"lq25":1.07,"chg":-0.125089,"cls":"Mature"},{"id":"IC03","name":"Chemicals and Chemical-based Products","jobs":25864.8,"epw":252529.0,"est":264.75,"lq20":1.8153,"lq25":2.0505,"chg":0.129554,"cls":"Star"},{"id":"IC01","name":"Agribusiness, Food Processing and Technology","jobs":19926.4,"epw":71026.0,"est":644.75,"lq20":0.4887,"lq25":0.507,"chg":0.037413,"cls":"Emerging"},{"id":"IC14","name":"Apparel and Textiles","jobs":16400.2,"epw":70939.0,"est":1421.25,"lq20":0.9057,"lq25":1.0137,"chg":0.119271,"cls":"Star"},{"id":"IC17","name":"Fabricated Metal Product Manufacturing","jobs":11943.8,"epw":99122.0,"est":349.5,"lq20":1.268,"lq25":1.2409,"chg":-0.021364,"cls":"Mature"},{"id":"IC18","name":"Machinery Manufacturing","jobs":7055.9,"epw":97701.0,"est":188.75,"lq20":0.8847,"lq25":0.9602,"chg":0.085329,"cls":"Emerging"},{"id":"IC13","name":"Mining and Quarrying (Except Fossil Fuels)","jobs":4011.0,"epw":150083.0,"est":194.5,"lq20":0.9354,"lq25":0.9337,"chg":-0.001782,"cls":"Transforming"},{"id":"IC19","name":"Computer and Electronic Product Manufacturing","jobs":3748.0,"epw":130901.0,"est":111.5,"lq20":0.5163,"lq25":0.5582,"chg":0.081129,"cls":"Emerging"},{"id":"IC06","name":"Glass and Ceramics","jobs":2451.9,"epw":96015.0,"est":65.5,"lq20":1.1778,"lq25":1.3648,"chg":0.158762,"cls":"Star"},{"id":"IC16","name":"Primary Metal","jobs":2272.1,"epw":114882.0,"est":21.0,"lq20":0.9088,"lq25":0.9598,"chg":0.056116,"cls":"Emerging"},{"id":"IC20","name":"Electrical Equipment, Appliance and Component","jobs":677.6,"epw":115455.0,"est":39.5,"lq20":0.3806,"lq25":0.2308,"chg":-0.393659,"cls":"Transforming"}];
 
-        <!-- Charts Grid 1 -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Chart 1: Jobs by Cluster -->
-            <div class="bg-white dark:bg-[#111c30] rounded-xl p-6 border border-slate-200 dark:border-slate-700/60 shadow-md transition-colors">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <i data-lucide="bar-chart-2" class="text-[#C28E0E] dark:text-[#CFB991]"></i> Employment by Industry Cluster
-                    </h3>
-                    <span class="text-xs text-slate-500 dark:text-slate-400 italic">2025 Jobs</span>
-                </div>
-                <div class="relative h-[420px] w-full">
-                    <canvas id="jobsChart"></canvas>
-                </div>
-            </div>
-            <!-- Chart 2: Specialization Trend -->
-            <div class="bg-white dark:bg-[#111c30] rounded-xl p-6 border border-slate-200 dark:border-slate-700/60 shadow-md transition-colors">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <i data-lucide="trending-up" class="text-[#C28E0E] dark:text-[#CFB991]"></i> Concentration Trend (2020 vs 2025 LQ)
-                    </h3>
-                    <span class="text-xs text-[#C28E0E] dark:text-[#CFB991] font-semibold">Top 8 Clusters by Jobs</span>
-                </div>
-                <div class="relative h-[420px] w-full">
-                    <canvas id="specializationChart"></canvas>
-                </div>
-            </div>
-        </div>
+const CLASSES = [
+  {k:'Star',         c:'var(--star)',        hex:'#DAAA00', note:'Concentrated and growing'},
+  {k:'Emerging',     c:'var(--emerging)',    hex:'#8E6F3E', note:'Below national share, growing'},
+  {k:'Mature',       c:'var(--mature)',      hex:'#555960', note:'Concentrated, losing share'},
+  {k:'Transforming', c:'var(--transforming)',hex:'#C4BFC0', note:'Below national share, losing share'}
+];
+const HEX = Object.fromEntries(CLASSES.map(c=>[c.k,c.hex]));
 
-        <!-- Charts Grid 2 -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Chart 3: Quadrant Bubble Chart -->
-            <div class="bg-white dark:bg-[#111c30] rounded-xl p-6 border border-slate-200 dark:border-slate-700/60 shadow-md lg:col-span-2 transition-colors">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <i data-lucide="pie-chart" class="text-[#C28E0E] dark:text-[#CFB991]"></i> Competitiveness Quadrant Landscape
-                    </h3>
-                    <span class="text-xs text-slate-500 dark:text-slate-400">Bubble size = 2025 Jobs</span>
-                </div>
-                <div class="relative h-[400px] w-full">
-                    <canvas id="quadrantChart"></canvas>
-                </div>
-            </div>
-            <!-- Chart 4: Competitiveness Pie -->
-            <div class="bg-white dark:bg-[#111c30] rounded-xl p-6 border border-slate-200 dark:border-slate-700/60 shadow-md transition-colors">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <i data-lucide="pie-chart" class="text-[#C28E0E] dark:text-[#CFB991]"></i> Competitiveness Distribution
-                    </h3>
-                </div>
-                <div class="relative h-[400px] w-full flex items-center justify-center">
-                    <canvas id="pieChart"></canvas>
-                </div>
-            </div>
-        </div>
+const COLS = [
+  {k:'name', t:'Industry cluster', r:false},
+  {k:'jobs', t:'2025 jobs', r:true},
+  {k:'epw',  t:'Earnings per worker', r:true},
+  {k:'est',  t:'Establishments', r:true},
+  {k:'lq25', t:'Employment concentration', r:true},
+  {k:'chg',  t:'Change since 2020', r:true},
+  {k:'cls',  t:'Competitiveness', r:false}
+];
 
-        <!-- Data Table Section -->
-        <div class="bg-white dark:bg-[#111c30] rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-md overflow-hidden transition-colors">
-            <div class="p-6 border-b border-slate-200 dark:border-slate-700/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-colors">
-                <div>
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <i data-lucide="table" class="text-[#C28E0E] dark:text-[#CFB991]"></i> Industry Cluster Data Table
-                    </h3>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Detailed metrics for all 21 industry clusters. Click column headers to sort.</p>
-                </div>
-                <div>
-                    <span id="tableRecordCount" class="text-xs font-semibold text-[#C28E0E] dark:text-[#CFB991] bg-slate-100 dark:bg-[#CFB991]/10 px-3 py-1.5 rounded-lg border border-[#CFB991]/20 transition-colors">21 Records Shown</span>
-                </div>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead>
-                        <tr class="bg-slate-100 dark:bg-[#16243d] border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold cursor-pointer select-none transition-colors">
-                            <th onclick="handleSort('Cluster Name')" class="p-4 hover:text-[#C28E0E] dark:hover:text-[#CFB991] transition-colors">
-                                <div class="flex items-center gap-1.5">Cluster Name <span id="sort-icon-Cluster-Name"></span></div>
-                            </th>
-                            <th onclick="handleSort('SBDC Region')" class="p-4 hover:text-[#C28E0E] dark:hover:text-[#CFB991] transition-colors">
-                                <div class="flex items-center gap-1.5">SBDC Region <span id="sort-icon-SBDC-Region"></span></div>
-                            </th>
-                            <th onclick="handleSort('2025 Jobs')" class="p-4 text-right hover:text-[#C28E0E] dark:hover:text-[#CFB991] transition-colors">
-                                <div class="flex items-center justify-end gap-1.5">2025 Jobs <span id="sort-icon-2025-Jobs"></span></div>
-                            </th>
-                            <th onclick="handleSort('Earnings Per Worker')" class="p-4 text-right hover:text-[#C28E0E] dark:hover:text-[#CFB991] transition-colors">
-                                <div class="flex items-center justify-end gap-1.5">Earnings <span id="sort-icon-Earnings-Per-Worker"></span></div>
-                            </th>
-                            <th onclick="handleSort('Establishments')" class="p-4 text-right hover:text-[#C28E0E] dark:hover:text-[#CFB991] transition-colors">
-                                <div class="flex items-center justify-end gap-1.5">Establishments <span id="sort-icon-Establishments"></span></div>
-                            </th>
-                            <th onclick="handleSort('2025 Employment Concentration')" class="p-4 text-right hover:text-[#C28E0E] dark:hover:text-[#CFB991] transition-colors">
-                                <div class="flex items-center justify-end gap-1.5">2025 LQ <span id="sort-icon-2025-Employment-Concentration"></span></div>
-                            </th>
-                            <th onclick="handleSort('Competitiveness')" class="p-4 text-center hover:text-[#C28E0E] dark:hover:text-[#CFB991] transition-colors">
-                                <div class="flex items-center justify-center gap-1.5">Competitiveness <span id="sort-icon-Competitiveness"></span></div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-200 dark:divide-slate-800 transition-colors">
-                        <!-- Filled by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </main>
+const state = {q:'', cls:new Set(CLASSES.map(c=>c.k)), min:0, sort:'jobs', dir:-1, open:null, active:null};
 
-    <!-- JS Code -->
-    <script>
-        // Embed the full structured CSV data (210 active records across 10 regions)
-        const csvData = `Cluster ID,Cluster Name,2025 Jobs,Earnings Per Worker,Establishments,2020 Employment Concentration,2025 Employment Concentration,Percent Change Employment Concentration,SBDC Region,Competitiveness
-IC01,"Agribusiness, Food Processing and Technology",19926.42766,71025.87722,644.75,0.488728,0.507013,0.037413449,Central Indiana,Emerging
-IC02,"Arts, Entertainment, Recreation and Visitor",149617.1707,41992.97248,7311.5,0.972126,0.954101,-0.018541835,Central Indiana,Transforming
-IC09,"Biomedical, Biotechnical and Healthcare",138059.4732,108144.799,3059.5,1.046591,1.098164,0.049277129,Central Indiana,Star
-IC10,"Business, Financial Technology and Specialized Services",222829.9488,94818.75107,14346.75,1.025137,0.988822,-0.035424534,Central Indiana,Transforming
-IC03,Chemicals and Chemical-based Products,25864.77068,252528.5942,264.75,1.815304,2.050483,0.129553507,Central Indiana,Star
-IC08,Defense and Security,42935.70642,129787.9309,3586,0.950682,0.903911,-0.049197313,Central Indiana,Transforming
-IC07,Education and Knowledge Creation,30569.18449,58895.05305,1656.75,0.662037,0.708835,0.070687892,Central Indiana,Emerging
-IC04,Energy (Fossil and Renewable),51666.33992,109060.3051,2843,0.818721,0.853739,0.042771591,Central Indiana,Emerging
-IC05,Forest and Wood Products,35619.65752,113317.4462,1803.5,0.963238,1.032684,0.072096408,Central Indiana,Star
-IC06,Glass and Ceramics,2451.91692,96015.30982,65.5,1.177791,1.36478,0.158762463,Central Indiana,Star
-IC14,Apparel and Textiles,16400.24699,70938.52134,1421.25,0.905683,1.013705,0.119271312,Central Indiana,Star
-IC11,Information Technology and Telecommunications,56080.63741,127365.2563,5025,0.902563,0.885507,-0.018897296,Central Indiana,Transforming
-IC13,Mining and Quarrying (Except Fossil Fuels),4010.957851,150083.232,194.5,0.935408,0.933741,-0.00178211,Central Indiana,Transforming
-IC15,"Printed Products, Media Creation and Distribution",32375.54612,71384.25837,2307.75,0.909366,0.891582,-0.019556482,Central Indiana,Transforming
-IC12,Transportation and Logistics,131730.5123,59896.20467,2516.75,1.531812,1.587276,0.036208099,Central Indiana,Star
-IC19,Computer and Electronic Product Manufacturing,3747.95091,130901.0917,111.5,0.516288,0.558174,0.081129137,Central Indiana,Emerging
-IC20,"Electrical Equipment, Appliance and Component",677.6054005,115455.3658,39.5,0.380629,0.230791,-0.393658917,Central Indiana,Transforming
-IC17,Fabricated Metal Product Manufacturing,11943.76189,99122.33461,349.5,1.267972,1.240883,-0.021364036,Central Indiana,Mature
-IC18,Machinery Manufacturing,7055.945432,97700.70374,188.75,0.884731,0.960224,0.085328761,Central Indiana,Emerging
-IC16,Primary Metal,2272.102138,114882.3077,21,0.908767,0.959763,0.056115594,Central Indiana,Emerging
-IC21,Transportation Equipment Manufacturing,27264.83137,136098.8853,1705,1.222956,1.069978,-0.125088719,Central Indiana,Mature
-IC01,"Agribusiness, Food Processing and Technology",14699.29684,62054.95951,368.25,1.865929,2.101423,0.126207374,East Central Indiana,Star
-IC02,"Arts, Entertainment, Recreation and Visitor",25535.51081,25527.1353,1308,0.933916,0.914923,-0.020336947,East Central Indiana,Transforming
-IC09,"Biomedical, Biotechnical and Healthcare",26771.1822,67836.32685,536.75,1.283993,1.196453,-0.068177942,East Central Indiana,Mature
-IC10,"Business, Financial Technology and Specialized Services",19014.16989,63165.88397,1590.75,0.471509,0.474077,0.005446344,East Central Indiana,Emerging
-IC03,Chemicals and Chemical-based Products,3666.854857,84678.2823,72.5,1.370006,1.633309,0.192191129,East Central Indiana,Star
-IC08,Defense and Security,2380.57051,78106.85044,280.75,0.333602,0.281589,-0.155913334,East Central Indiana,Transforming
-IC07,Education and Knowledge Creation,7488.48818,33123.029,155.5,1.187462,0.975624,-0.178395603,East Central Indiana,Transforming
-IC04,Energy (Fossil and Renewable),5523.056034,87488.77625,470,0.484725,0.512771,0.057859611,East Central Indiana,Emerging
-IC05,Forest and Wood Products,5222.532953,71423.85592,280.5,0.917851,0.850718,-0.073141501,East Central Indiana,Transforming
-IC06,Glass and Ceramics,1203.009753,95345.21969,22,3.955574,3.762295,-0.048862441,East Central Indiana,Mature
-IC14,Apparel and Textiles,1525.535475,52971.6294,113.25,0.405975,0.529798,0.30500154,East Central Indiana,Emerging
-IC11,Information Technology and Telecommunications,2996.073564,84263.53487,368.75,0.286886,0.265802,-0.073492607,East Central Indiana,Transforming
-IC13,Mining and Quarrying (Except Fossil Fuels),741.2961136,88462.84581,58.5,0.958609,0.96961,0.011476003,East Central Indiana,Emerging
-IC15,"Printed Products, Media Creation and Distribution",2986.23775,46469.85218,236.25,0.431663,0.462057,0.070411409,East Central Indiana,Emerging
-IC12,Transportation and Logistics,14413.88018,52514.61077,413.25,0.959236,0.97583,0.017299184,East Central Indiana,Emerging
-IC19,Computer and Electronic Product Manufacturing,161.9446099,98171.54851,9.5,0.170257,0.135509,-0.204091462,East Central Indiana,Transforming
-IC20,"Electrical Equipment, Appliance and Component",437.7435266,108920.8888,5,1.076983,0.8377,-0.222178994,East Central Indiana,Transforming
-IC17,Fabricated Metal Product Manufacturing,3020.890692,75145.65559,140.25,1.613088,1.763403,0.093184625,East Central Indiana,Star
-IC18,Machinery Manufacturing,3729.745519,82511.82174,77.25,2.575074,2.851829,0.107474581,East Central Indiana,Star
-IC16,Primary Metal,1947.592851,91255.01191,27,4.359102,4.622333,0.06038652,East Central Indiana,Star
-IC21,Transportation Equipment Manufacturing,7171.734189,82117.78401,188.75,1.633782,1.581332,-0.032103426,East Central Indiana,Mature
-IC01,"Agribusiness, Food Processing and Technology",20800.007,67713.79127,600.75,2.688238,2.683713,-0.001683259,Hoosier Heartland,Mature
-IC02,"Arts, Entertainment, Recreation and Visitor",27517.71446,25197.39478,1390.75,0.876114,0.889832,0.01565778,Hoosier Heartland,Emerging
-IC09,"Biomedical, Biotechnical and Healthcare",21239.43837,65451.34044,498.75,0.899481,0.856696,-0.047566319,Hoosier Heartland,Transforming
-IC10,"Business, Financial Technology and Specialized Services",20990.34106,64371.87881,1816.75,0.44602,0.472331,0.058990628,Hoosier Heartland,Emerging
-IC03,Chemicals and Chemical-based Products,3481.092936,102153.5516,69.5,1.174805,1.399413,0.191187474,Hoosier Heartland,Star
-IC08,Defense and Security,4653.930095,96233.9086,446,0.411531,0.496832,0.207277216,Hoosier Heartland,Emerging
-IC07,Education and Knowledge Creation,4685.803271,48839.50675,239.75,0.510925,0.55097,0.078377453,Hoosier Heartland,Emerging
-IC04,Energy (Fossil and Renewable),9672.581438,97871.29648,588.25,0.74552,0.81048,0.087133813,Hoosier Heartland,Emerging
-IC05,Forest and Wood Products,7932.775084,79835.59418,298.75,1.126617,1.166233,0.03516368,Hoosier Heartland,Star
-IC06,Glass and Ceramics,721.850023,73493.43179,18,1.156527,2.037448,0.761695144,Hoosier Heartland,Star
-IC14,Apparel and Textiles,1285.050136,46175.09053,114,0.486623,0.402776,-0.172303816,Hoosier Heartland,Transforming
-IC11,Information Technology and Telecommunications,6383.858109,96016.03772,626.75,0.426304,0.511146,0.199017602,Hoosier Heartland,Emerging
-IC13,Mining and Quarrying (Except Fossil Fuels),1475.552478,88062.84301,48.5,1.111858,1.74187,0.566629911,Hoosier Heartland,Star
-IC15,"Printed Products, Media Creation and Distribution",4349.443217,52525.32343,254,0.577455,0.60738,0.05182222,Hoosier Heartland,Emerging
-IC12,Transportation and Logistics,12174.89761,50335.78558,533,0.706612,0.743899,0.052768705,Hoosier Heartland,Emerging
-IC19,Computer and Electronic Product Manufacturing,808.9085934,92373.02971,25.5,0.520285,0.610883,0.174131486,Hoosier Heartland,Emerging
-IC20,"Electrical Equipment, Appliance and Component",1652.560301,92359.0328,16.25,2.460599,2.854185,0.15995536,Hoosier Heartland,Star
-IC17,Fabricated Metal Product Manufacturing,4346.061612,75533.19396,120,2.23059,2.289646,0.026475506,Hoosier Heartland,Star
-IC18,Machinery Manufacturing,4488.080861,117166.5673,44.25,2.315687,3.09714,0.337460546,Hoosier Heartland,Star
-IC16,Primary Metal,3511.3969,125137.913,14,7.954989,7.521402,-0.054505041,Hoosier Heartland,Mature
-IC21,Transportation Equipment Manufacturing,20326.94897,110777.0497,227.25,4.492557,4.045076,-0.099604969,Hoosier Heartland,Mature
-IC01,"Agribusiness, Food Processing and Technology",11611.27498,61026.97555,386.75,0.953535,1.024362,0.074278343,North Central Indiana,Star
-IC02,"Arts, Entertainment, Recreation and Visitor",35592.57424,31068.21216,1821.75,0.781783,0.786966,0.006629717,North Central Indiana,Emerging
-IC09,"Biomedical, Biotechnical and Healthcare",37321.43852,78761.16662,616.25,1.081145,1.029302,-0.04795194,North Central Indiana,Mature
-IC10,"Business, Financial Technology and Specialized Services",34788.00476,73277.1996,2453,0.508089,0.535251,0.053459138,North Central Indiana,Emerging
-IC03,Chemicals and Chemical-based Products,11548.04775,77758.08359,236,3.327843,3.17424,-0.046156925,North Central Indiana,Mature
-IC08,Defense and Security,13090.769,116665.7076,542.75,1.047973,0.955555,-0.088187387,North Central Indiana,Transforming
-IC07,Education and Knowledge Creation,22050.90012,57318.16824,268.25,1.7011,1.772847,0.042176827,North Central Indiana,Star
-IC04,Energy (Fossil and Renewable),10500.91048,101676.1183,682,0.53081,0.601628,0.13341497,North Central Indiana,Emerging
-IC05,Forest and Wood Products,17512.53101,79384.90104,624.75,1.902825,1.760394,-0.074852391,North Central Indiana,Mature
-IC06,Glass and Ceramics,2619.001691,81296.6085,62.25,4.31247,5.054476,0.172060559,North Central Indiana,Star
-IC14,Apparel and Textiles,3399.917417,59135.81631,271.5,0.777983,0.72864,-0.063424265,North Central Indiana,Transforming
-IC11,Information Technology and Telecommunications,9198.864104,96997.474,809,0.40162,0.503613,0.253953986,North Central Indiana,Emerging
-IC13,Mining and Quarrying (Except Fossil Fuels),1486.980424,95186.07661,65.75,1.058936,1.200237,0.13343677,North Central Indiana,Star
-IC15,"Printed Products, Media Creation and Distribution",7394.543728,70877.604,450,0.685289,0.706056,0.030304003,North Central Indiana,Emerging
-IC12,Transportation and Logistics,19059.83508,51214.41145,681.25,0.77109,0.796286,0.032675823,North Central Indiana,Emerging
-IC19,Computer and Electronic Product Manufacturing,977.5007351,76809.50553,33.5,0.473699,0.50475,0.065550064,North Central Indiana,Emerging
-IC20,"Electrical Equipment, Appliance and Component",1180.116103,92026.22948,31.75,1.248632,1.393639,0.116132696,North Central Indiana,Star
-IC17,Fabricated Metal Product Manufacturing,11554.4602,77922.83828,302.5,4.111573,4.1622,0.012313292,North Central Indiana,Star
-IC18,Machinery Manufacturing,3845.732382,88193.74189,122.25,1.820448,1.814596,-0.003214593,North Central Indiana,Mature
-IC16,Primary Metal,3283.678326,91214.57378,44,4.217323,4.809283,0.140363923,North Central Indiana,Star
-IC21,Transportation Equipment Manufacturing,41796.68672,93638.91638,566.75,5.660657,5.687184,0.004686205,North Central Indiana,Star
-IC01,"Agribusiness, Food Processing and Technology",19316.48643,58956.16302,558.75,1.507923,1.5432,0.023394431,Northeast Indiana,Star
-IC02,"Arts, Entertainment, Recreation and Visitor",41204.55289,28926.9141,2183,0.851542,0.825016,-0.031150548,Northeast Indiana,Transforming
-IC09,"Biomedical, Biotechnical and Healthcare",43971.5143,79357.31699,687.75,1.0994,1.098188,-0.00110242,Northeast Indiana,Mature
-IC10,"Business, Financial Technology and Specialized Services",45172.26455,78455.11323,3294.75,0.621338,0.629391,0.01296074,Northeast Indiana,Emerging
-IC03,Chemicals and Chemical-based Products,10081.74962,83159.51602,154.5,2.204915,2.509503,0.138140473,Northeast Indiana,Star
-IC08,Defense and Security,8518.426081,95557.88954,626.25,0.479324,0.563081,0.174739842,Northeast Indiana,Emerging
-IC07,Education and Knowledge Creation,8300.250989,39184.51469,300.75,0.651939,0.604306,-0.073063584,Northeast Indiana,Transforming
-IC04,Energy (Fossil and Renewable),14637.83049,99676.33133,877,0.727087,0.759449,0.044509117,Northeast Indiana,Emerging
-IC05,Forest and Wood Products,15729.07463,82325.19164,670.75,1.35664,1.431808,0.055407477,Northeast Indiana,Star
-IC06,Glass and Ceramics,2660.490966,75118.7793,54.25,3.90765,4.649677,0.189890855,Northeast Indiana,Star
-IC14,Apparel and Textiles,4071.189702,63882.85957,304.5,0.832714,0.790108,-0.051165226,Northeast Indiana,Transforming
-IC11,Information Technology and Telecommunications,11239.57686,100365.8541,953.25,0.567955,0.557229,-0.018885299,Northeast Indiana,Transforming
-IC13,Mining and Quarrying (Except Fossil Fuels),1715.314942,94581.35831,107.75,1.199233,1.253795,0.045497414,Northeast Indiana,Star
-IC15,"Printed Products, Media Creation and Distribution",8033.615721,63818.91277,521.5,0.742183,0.694639,-0.064059673,Northeast Indiana,Transforming
-IC12,Transportation and Logistics,26245.59983,54457.99732,856.25,0.91718,0.992949,0.082610829,Northeast Indiana,Emerging
-IC19,Computer and Electronic Product Manufacturing,3516.253133,103270.8029,49.5,1.54204,1.644222,0.06626417,Northeast Indiana,Star
-IC20,"Electrical Equipment, Appliance and Component",1943.671313,85801.85092,35.5,2.736204,2.078591,-0.240337709,Northeast Indiana,Mature
-IC17,Fabricated Metal Product Manufacturing,12922.42259,85277.61259,295.5,4.064614,4.215391,0.037095035,Northeast Indiana,Star
-IC18,Machinery Manufacturing,5878.994609,84420.33719,164.5,2.450588,2.512029,0.025071942,Northeast Indiana,Star
-IC16,Primary Metal,6405.191147,117675.2374,54.75,7.565739,8.495178,0.122848409,Northeast Indiana,Star
-IC21,Transportation Equipment Manufacturing,23424.72244,95087.55581,445.25,2.945116,2.88636,-0.019950318,Northeast Indiana,Mature
-IC01,"Agribusiness, Food Processing and Technology",13559.24206,67343.95656,424.75,1.00258,1.117346,0.114470666,Northwest Indiana,Star
-IC02,"Arts, Entertainment, Recreation and Visitor",50969.47356,30167.04618,2589.5,1.105601,1.052653,-0.047890695,Northwest Indiana,Mature
-IC09,"Biomedical, Biotechnical and Healthcare",36765.73382,63762.48807,831.75,1.045852,0.947124,-0.09439959,Northwest Indiana,Transforming
-IC10,"Business, Financial Technology and Specialized Services",46386.84708,65905.7294,3802.75,0.587409,0.666656,0.134909407,Northwest Indiana,Emerging
-IC03,Chemicals and Chemical-based Products,4933.897352,106432.8316,140,1.294509,1.266777,-0.021422794,Northwest Indiana,Mature
-IC08,Defense and Security,4596.475581,79157.10684,660.25,0.273814,0.313397,0.144561637,Northwest Indiana,Emerging
-IC07,Education and Knowledge Creation,6343.914954,38935.602,365.5,0.472004,0.47641,0.009334667,Northwest Indiana,Emerging
-IC04,Energy (Fossil and Renewable),17661.65003,127543.1806,1026.25,0.916806,0.945172,0.030940024,Northwest Indiana,Emerging
-IC05,Forest and Wood Products,8958.929303,96078.84826,554,0.784605,0.841194,0.07212419,Northwest Indiana,Emerging
-IC06,Glass and Ceramics,1533.006573,98174.75484,47.5,2.630991,2.763524,0.050373795,Northwest Indiana,Star
-IC14,Apparel and Textiles,3728.243883,58531.4632,345,0.586799,0.746324,0.271856292,Northwest Indiana,Emerging
-IC11,Information Technology and Telecommunications,8756.681914,95070.20401,1068.5,0.358426,0.447797,0.249342961,Northwest Indiana,Emerging
-IC13,Mining and Quarrying (Except Fossil Fuels),2362.683069,99865.15836,161.25,1.719894,1.781337,0.035724876,Northwest Indiana,Star
-IC15,"Printed Products, Media Creation and Distribution",7075.803692,53936.59617,562.5,0.549293,0.631077,0.148889573,Northwest Indiana,Emerging
-IC12,Transportation and Logistics,29251.32956,55563.01735,1126.75,1.084515,1.141495,0.052539614,Northwest Indiana,Star
-IC19,Computer and Electronic Product Manufacturing,563.1061313,96115.59269,20.5,0.256152,0.271599,0.060304038,Northwest Indiana,Emerging
-IC20,"Electrical Equipment, Appliance and Component",547.2922451,82556.49571,16,0.436043,0.603704,0.384505657,Northwest Indiana,Emerging
-IC17,Fabricated Metal Product Manufacturing,4820.335393,88456.33497,187.5,1.602805,1.62192,0.011925967,Northwest Indiana,Star
-IC18,Machinery Manufacturing,4872.227162,92497.38255,93.75,1.913386,2.147372,0.122288968,Northwest Indiana,Star
-IC16,Primary Metal,15689.47967,152876.1006,36.75,21.757398,21.463822,-0.013493158,Northwest Indiana,Mature
-IC21,Transportation Equipment Manufacturing,4743.441142,86575.89177,329.75,0.603578,0.602876,-0.001163064,Northwest Indiana,Transforming
-IC01,"Agribusiness, Food Processing and Technology",10724.8702,56207.64588,275.5,1.772398,1.750444,-0.012386608,South Central Indiana,Mature
-IC02,"Arts, Entertainment, Recreation and Visitor",23423.68517,26902.90435,1124.5,0.947738,0.958152,0.010988269,South Central Indiana,Emerging
-IC09,"Biomedical, Biotechnical and Healthcare",22889.00896,70050.67451,366.75,1.158873,1.167869,0.007762714,South Central Indiana,Star
-IC10,"Business, Financial Technology and Specialized Services",19440.10103,70191.22943,1514.5,0.539795,0.553362,0.025133616,South Central Indiana,Emerging
-IC03,Chemicals and Chemical-based Products,6627.624786,97628.46959,75.5,2.775092,3.370325,0.214491267,South Central Indiana,Star
-IC08,Defense and Security,3922.096986,88497.91849,377.5,0.494691,0.526952,0.065214447,South Central Indiana,Emerging
-IC07,Education and Knowledge Creation,3628.424742,33049.90702,195,0.487023,0.539692,0.10814479,South Central Indiana,Emerging
-IC04,Energy (Fossil and Renewable),8493.305781,88397.91997,479.5,0.821435,0.900244,0.09594064,South Central Indiana,Emerging
-IC05,Forest and Wood Products,13308.91399,74868.06553,439.75,2.592989,2.475064,-0.045478403,South Central Indiana,Mature
-IC06,Glass and Ceramics,312.6480293,92530.11014,11.5,0.519344,1.116294,1.14943082,South Central Indiana,Star
-IC14,Apparel and Textiles,1900.31825,58581.2609,105.75,0.833887,0.753449,-0.096461511,South Central Indiana,Transforming
-IC11,Information Technology and Telecommunications,6438.275623,91046.42169,499.75,0.572423,0.652101,0.139194267,South Central Indiana,Emerging
-IC13,Mining and Quarrying (Except Fossil Fuels),1205.374093,86064.44164,56,2.033104,1.799975,-0.114666539,South Central Indiana,Mature
-IC15,"Printed Products, Media Creation and Distribution",3122.437414,53774.58701,240.75,0.553921,0.551574,-0.004237066,South Central Indiana,Transforming
-IC12,Transportation and Logistics,9700.939402,46403.39215,336,0.747029,0.749801,0.003710699,South Central Indiana,Emerging
-IC19,Computer and Electronic Product Manufacturing,737.1838819,88764.75848,14.75,0.637252,0.704236,0.105113833,South Central Indiana,Emerging
-IC20,"Electrical Equipment, Appliance and Component",144.0946359,73884.41899,2,0.480195,0.314816,-0.344399671,South Central Indiana,Transforming
-IC17,Fabricated Metal Product Manufacturing,793.5766088,63334.62883,58.75,0.580874,0.528865,-0.089535769,South Central Indiana,Transforming
-IC18,Machinery Manufacturing,1001.969022,79750.0985,26.25,0.785179,0.874657,0.113958728,South Central Indiana,Emerging
-IC16,Primary Metal,997.5265789,124820.0806,5.5,2.831703,2.702881,-0.045492765,South Central Indiana,Mature
-IC21,Transportation Equipment Manufacturing,4133.46126,79037.93666,185.75,1.086212,1.040524,-0.042061771,South Central Indiana,Mature
-IC01,"Agribusiness, Food Processing and Technology",14305.153,56229.77177,334.75,1.519265,1.554553,0.023227021,Southeast Indiana,Star
-IC02,"Arts, Entertainment, Recreation and Visitor",33753.41709,29005.75015,1592,0.955727,0.919292,-0.038122811,Southeast Indiana,Transforming
-IC09,"Biomedical, Biotechnical and Healthcare",25351.51147,65183.48677,679.25,0.776737,0.861248,0.108802593,Southeast Indiana,Emerging
-IC10,"Business, Financial Technology and Specialized Services",27927.61883,67815.31247,2454.5,0.514823,0.529299,0.028118402,Southeast Indiana,Emerging
-IC03,Chemicals and Chemical-based Products,6485.650038,84757.10195,131.75,2.311426,2.195959,-0.049954876,Southeast Indiana,Mature
-IC08,Defense and Security,3920.576073,83786.29377,488.75,0.40221,0.352517,-0.123549887,Southeast Indiana,Transforming
-IC07,Education and Knowledge Creation,3667.559838,35687.15905,229,0.335385,0.363213,0.082973299,Southeast Indiana,Emerging
-IC04,Energy (Fossil and Renewable),8131.913164,88948.14322,682.75,0.541376,0.573896,0.060069157,Southeast Indiana,Emerging
-IC05,Forest and Wood Products,9420.067,77706.40986,488.25,1.202915,1.166419,-0.030339633,Southeast Indiana,Mature
-IC06,Glass and Ceramics,983.2497709,87900.11098,26.5,2.58966,2.337458,-0.097388074,Southeast Indiana,Mature
-IC14,Apparel and Textiles,2171.154215,52050.84795,182.25,0.435269,0.573159,0.316792604,Southeast Indiana,Emerging
-IC11,Information Technology and Telecommunications,6648.411297,96873.84017,708.25,0.443493,0.448353,0.010958459,Southeast Indiana,Emerging
-IC13,Mining and Quarrying (Except Fossil Fuels),2585.780308,119312.0972,83.75,2.459265,2.570947,0.045412755,Southeast Indiana,Star
-IC15,"Printed Products, Media Creation and Distribution",4841.416959,53224.64044,340.5,0.530632,0.569429,0.073114701,Southeast Indiana,Emerging
-IC12,Transportation and Logistics,26895.08519,60388.17587,672.5,1.369312,1.384083,0.010787169,Southeast Indiana,Star
-IC19,Computer and Electronic Product Manufacturing,1713.997007,108909.3325,15.5,0.934852,1.090208,0.166182455,Southeast Indiana,Star
-IC20,"Electrical Equipment, Appliance and Component",1250.893744,108481.104,9.75,2.354784,1.819641,-0.227257787,Southeast Indiana,Mature
-IC17,Fabricated Metal Product Manufacturing,4450.066375,74796.43652,184.75,2.125926,1.974601,-0.071180747,Southeast Indiana,Mature
-IC18,Machinery Manufacturing,13507.89639,147523.3635,96.75,7.65639,7.851059,0.02542569,Southeast Indiana,Star
-IC16,Primary Metal,2746.653849,95364.15338,21.25,4.519483,4.955223,0.096413683,Southeast Indiana,Star
-IC21,Transportation Equipment Manufacturing,15879.49822,96274.29791,278.5,2.905458,2.661532,-0.083954406,Southeast Indiana,Mature
-IC01,"Agribusiness, Food Processing and Technology",9431.802521,69699.91941,321.75,1.417783,1.40598,-0.008324969,Southwest Indiana,Mature
-IC02,"Arts, Entertainment, Recreation and Visitor",24499.59371,28604.82693,1190,0.916766,0.915306,-0.001592555,Southwest Indiana,Transforming
-IC09,"Biomedical, Biotechnical and Healthcare",22095.52442,74243.52504,437,1.057868,1.029674,-0.026651718,Southwest Indiana,Mature
-IC10,"Business, Financial Technology and Specialized Services",21823.64424,78479.93722,1650.5,0.529242,0.56737,0.072042657,Southwest Indiana,Emerging
-IC03,Chemicals and Chemical-based Products,8664.264129,96550.61936,99.75,3.570411,4.024145,0.127081728,Southwest Indiana,Star
-IC08,Defense and Security,3597.191682,96134.42259,283,0.395534,0.443675,0.121711408,Southwest Indiana,Emerging
-IC07,Education and Knowledge Creation,4067.320233,40856.5551,176.25,0.561922,0.55254,-0.016696267,Southwest Indiana,Transforming
-IC04,Energy (Fossil and Renewable),13131.21216,103447.8892,604.5,1.412758,1.271208,-0.100194088,Southwest Indiana,Mature
-IC05,Forest and Wood Products,5646.93008,93249.8461,328.25,0.942484,0.959145,0.017677754,Southwest Indiana,Emerging
-IC06,Glass and Ceramics,496.6630384,66909.10534,14,2.642012,1.61962,-0.386974775,Southwest Indiana,Mature
-IC14,Apparel and Textiles,1477.427827,63971.7839,130.75,0.55608,0.53501,-0.037890232,Southwest Indiana,Transforming
-IC11,Information Technology and Telecommunications,6169.402009,103425.7505,460,0.506346,0.570712,0.127118611,Southwest Indiana,Emerging
-IC13,Mining and Quarrying (Except Fossil Fuels),1119.351181,85293.27321,51,1.334506,1.526649,0.143980619,Southwest Indiana,Star
-IC15,"Printed Products, Media Creation and Distribution",4162.652838,68186.70351,246.5,0.578362,0.671597,0.161205266,Southwest Indiana,Emerging
-IC12,Transportation and Logistics,13323.54365,54522.59521,386.5,0.933785,0.940547,0.007241496,Southwest Indiana,Emerging
-IC19,Computer and Electronic Product Manufacturing,186.5794081,93743.65179,6,0.205679,0.162792,-0.208514238,Southwest Indiana,Transforming
-IC20,"Electrical Equipment, Appliance and Component",726.9404491,90974.07723,5.25,1.597842,1.450559,-0.092176198,Southwest Indiana,Mature
-IC17,Fabricated Metal Product Manufacturing,2525.474808,83623.64268,88.25,1.359712,1.537188,0.130524699,Southwest Indiana,Star
-IC18,Machinery Manufacturing,987.1971576,94424.5471,40,0.882313,0.787074,-0.10794242,Southwest Indiana,Transforming
-IC16,Primary Metal,2878.931627,122111.6737,9.25,5.300213,7.124623,0.344214468,Southwest Indiana,Star
-IC21,Transportation Equipment Manufacturing,13396.57687,110749.4988,150.75,3.038336,3.080066,0.013734492,Southwest Indiana,Star
-IC01,"Agribusiness, Food Processing and Technology",5322.744149,47058.82739,168.25,1.512785,1.640178,0.084210909,West Central Indiana,Star
-IC02,"Arts, Entertainment, Recreation and Visitor",11682.62827,26066.912,613.5,0.931509,0.902233,-0.031428574,West Central Indiana,Transforming
-IC09,"Biomedical, Biotechnical and Healthcare",12866.72201,77065.44031,243,1.280212,1.239465,-0.031828322,West Central Indiana,Mature
-IC10,"Business, Financial Technology and Specialized Services",8259.433466,65671.91518,708,0.408973,0.443874,0.085338152,West Central Indiana,Emerging
-IC03,Chemicals and Chemical-based Products,4166.163121,93081.26518,46.75,3.364787,3.999902,0.188753404,West Central Indiana,Star
-IC08,Defense and Security,1828.346679,96039.72459,117.75,0.365464,0.466156,0.275518245,West Central Indiana,Emerging
-IC07,Education and Knowledge Creation,3063.752518,51265.04045,68.25,1.066682,0.86036,-0.193424095,West Central Indiana,Transforming
-IC04,Energy (Fossil and Renewable),4661.518671,101778.6589,241,0.808399,0.932847,0.153943783,West Central Indiana,Emerging
-IC05,Forest and Wood Products,3898.134593,79843.34303,156,1.479626,1.368673,-0.074987193,West Central Indiana,Mature
-IC06,Glass and Ceramics,241.882948,83693.28502,6.75,1.360646,1.630525,0.198346227,West Central Indiana,Star
-IC14,Apparel and Textiles,465.0179031,51879.51505,45,0.331221,0.348094,0.050941818,West Central Indiana,Emerging
-IC11,Information Technology and Telecommunications,1474.864482,85304.9945,167.75,0.242503,0.282031,0.163000045,West Central Indiana,Emerging
-IC13,Mining and Quarrying (Except Fossil Fuels),316.1437769,95770.57498,23.5,1.012455,0.891309,-0.119655688,West Central Indiana,Transforming
-IC15,"Printed Products, Media Creation and Distribution",1598.954502,56957.27206,108.75,0.528297,0.533268,0.00940948,West Central Indiana,Emerging
-IC12,Transportation and Logistics,6837.129376,51520.02437,240,0.961726,0.997712,0.037418142,West Central Indiana,Emerging
-IC19,Computer and Electronic Product Manufacturing,268.9735361,87452.46857,3,0.367333,0.485122,0.320660001,West Central Indiana,Emerging
-IC20,"Electrical Equipment, Appliance and Component",10.50847204,39472.50355,0.5,0.034694,0.043346,0.249380296,West Central Indiana,Emerging
-IC17,Fabricated Metal Product Manufacturing,1174.652204,68759.81531,40,1.289476,1.477966,0.146175656,West Central Indiana,Star
-IC18,Machinery Manufacturing,788.2468985,83231.93671,16.5,1.313513,1.299108,-0.010966774,West Central Indiana,Mature
-IC16,Primary Metal,936.6905861,120242.2205,5,2.976933,4.79179,0.609639854,West Central Indiana,Star
-IC21,Transportation Equipment Manufacturing,3009.204439,76350.90921,71.75,1.821101,1.430174,-0.214665194,West Central Indiana,Mature`;
+const n0 = v => v.toLocaleString('en-US',{maximumFractionDigits:0});
+const n1 = v => v.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+const usd = v => '$'+v.toLocaleString('en-US',{maximumFractionDigits:0});
+const pct = v => (v>=0?'+':'\u2212')+Math.abs(v*100).toFixed(1)+'%';
+const lq  = v => v.toFixed(3);
 
-        let rawData = [];
-        let filteredRows = [];
-        let sortColumn = '2025 Jobs';
-        let sortDirection = 'desc';
+const TOTALS = {
+  jobs: DATA.reduce((a,d)=>a+d.jobs,0),
+  est:  DATA.reduce((a,d)=>a+d.est,0)
+};
 
-        // Accents and custom color coding
-        const colors = {
-            star: '#D1A153',       // Purdue Gold
-            emerging: '#10B981',   // Emerald Green
-            mature: '#3B82F6',     // Royal Blue
-            transforming: '#EF4444' // Crimson Red
-        };
+/* ---------- filtering ---------- */
+function visible(){
+  const q = state.q.trim().toLowerCase();
+  return DATA.filter(d =>
+    state.cls.has(d.cls) &&
+    d.jobs >= state.min &&
+    (!q || d.name.toLowerCase().includes(q) || d.id.toLowerCase().includes(q))
+  );
+}
+function sorted(rows){
+  const k = state.sort, dir = state.dir;
+  return rows.slice().sort((a,b)=>{
+    let x=a[k], y=b[k];
+    if(k==='name'||k==='cls'){ return String(x).localeCompare(String(y))*dir; }
+    return (x-y)*dir;
+  });
+}
 
-        // Chart instances
-        let jobsChart = null;
-        let specializationChart = null;
-        let quadrantChart = null;
-        let pieChart = null;
+/* ---------- controls ---------- */
+const chips = document.getElementById('chips');
+CLASSES.forEach(c=>{
+  const count = DATA.filter(d=>d.cls===c.k).length;
+  const b = document.createElement('button');
+  b.type='button'; b.className='chip'; b.setAttribute('aria-pressed','true');
+  b.style.setProperty('--swatch', c.c);
+  b.innerHTML = `<span class="dot"></span>${c.k} <span class="n">${count}</span>`;
+  b.title = c.note;
+  b.onclick = ()=>{
+    if(state.cls.has(c.k)) state.cls.delete(c.k); else state.cls.add(c.k);
+    if(state.cls.size===0) state.cls = new Set(CLASSES.map(x=>x.k));
+    [...chips.children].forEach((el,i)=>el.setAttribute('aria-pressed', state.cls.has(CLASSES[i].k)));
+    state.open=null; render();
+  };
+  chips.appendChild(b);
+});
+document.getElementById('legend').innerHTML = CLASSES.map(c=>
+  `<span><i style="--c:${c.hex}"></i>${c.k} — ${c.note}</span>`).join('');
 
-        // Simple Bulletproof Light / Dark Toggle System - Defaults to Light Mode on load
-        const themeToggle = document.getElementById('themeToggle');
-        
-        function applyTheme(isDark) {
-            const htmlEl = document.documentElement;
-            if (isDark) {
-                htmlEl.classList.add('dark');
-                htmlEl.classList.remove('light');
-                localStorage.setItem('dashboard-theme', 'dark');
-            } else {
-                htmlEl.classList.remove('dark');
-                htmlEl.classList.add('light');
-                localStorage.setItem('dashboard-theme', 'light');
-            }
-            if (rawData && rawData.length > 0) {
-                updateDashboardChartsOnly();
-            }
-        }
+const q = document.getElementById('q');
+q.addEventListener('input', ()=>{ state.q=q.value; state.open=null; render(); });
+document.getElementById('clearQ').onclick = ()=>{ q.value=''; state.q=''; q.focus(); render(); };
 
-        // Toggle action
-        themeToggle.addEventListener('click', () => {
-            const isCurrentlyDark = document.documentElement.classList.contains('dark');
-            applyTheme(!isCurrentlyDark);
-        });
+const mj = document.getElementById('minJobs');
+mj.addEventListener('input', ()=>{
+  state.min = +mj.value;
+  document.getElementById('minJobsVal').textContent = state.min===0 ? '0' : n0(state.min);
+  state.open=null; render();
+});
 
-        // Initialize saved theme or default to Light Mode
-        const savedTheme = localStorage.getItem('dashboard-theme') || 'light';
-        applyTheme(savedTheme === 'dark');
+document.getElementById('reset').onclick = ()=>{
+  state.q=''; q.value=''; state.min=0; mj.value=0;
+  document.getElementById('minJobsVal').textContent='0';
+  state.cls = new Set(CLASSES.map(c=>c.k));
+  [...chips.children].forEach(el=>el.setAttribute('aria-pressed','true'));
+  state.sort='jobs'; state.dir=-1; state.open=null; state.active=null;
+  render();
+};
 
-        function isDarkActive() {
-            return document.documentElement.classList.contains('dark');
-        }
+document.getElementById('dl').onclick = ()=>{
+  const rows = sorted(visible());
+  const head = ['Cluster ID','Cluster Name','2025 Jobs','Earnings Per Worker','Establishments',
+                '2020 Employment Concentration','2025 Employment Concentration',
+                'Percent Change Employment Concentration','SBDC Region','Competitiveness'];
+  const esc = v => /[",]/.test(v) ? '"'+String(v).replace(/"/g,'""')+'"' : v;
+  const csv = [head.join(',')].concat(rows.map(d=>[d.id,esc(d.name),d.jobs,d.epw,d.est,d.lq20,d.lq25,d.chg,
+    'Central IN SBDC',d.cls].join(','))).join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  const a = document.createElement('a');
+  a.href=url; a.download='central-in-sbdc-clusters.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+};
 
-        // Initialize Application on DOM Ready
-        document.addEventListener('DOMContentLoaded', () => {
-            Papa.parse(csvData, {
-                header: true,
-                dynamicTyping: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    rawData = results.data;
-                    initFilters();
-                    setupEventListeners();
-                    updateDashboard();
-                    lucide.createIcons();
-                }
-            });
-        });
+/* ---------- header ---------- */
+const hrow = document.getElementById('hrow');
+COLS.forEach(c=>{
+  const th = document.createElement('th');
+  if(c.r) th.className='r';
+  th.scope='col';
+  th.innerHTML = `<button type="button">${c.t}<span class="arrow"></span></button>`;
+  th.querySelector('button').onclick = ()=>{
+    if(state.sort===c.k) state.dir = -state.dir;
+    else { state.sort=c.k; state.dir = (c.k==='name'||c.k==='cls') ? 1 : -1; }
+    state.open=null; render();
+  };
+  hrow.appendChild(th);
+});
 
-        // Initialize Filter Options - Single Region Selection
-        function initFilters() {
-            const regions = [...new Set(rawData.map(r => r['SBDC Region']))].sort();
-            const regionSelect = document.getElementById('regionFilter');
-            regionSelect.innerHTML = '';
-            
-            regions.forEach(reg => {
-                const opt = document.createElement('option');
-                opt.value = reg;
-                opt.textContent = reg;
-                regionSelect.appendChild(opt);
-            });
-            regionSelect.value = regions[0];
-        }
+/* ---------- table ---------- */
+const LQMAX = 2.2;
+function lqBar(v){
+  const half = 96, scale = half/(LQMAX-1);
+  const over = v>=1, w = Math.min(half, Math.abs(v-1)*scale);
+  const style = over ? `left:50%;width:${w}px;background:var(--rush)`
+                     : `right:50%;width:${w}px;background:var(--steam)`;
+  return `<span class="lqbar-wrap"><span class="mid"></span><i style="${style}"></i></span>`;
+}
 
-        function setupEventListeners() {
-            document.getElementById('regionFilter').addEventListener('change', updateDashboard);
-            document.getElementById('competitivenessFilter').addEventListener('change', updateDashboard);
-            document.getElementById('searchFilter').addEventListener('input', updateDashboard);
+function render(){
+  const rows = sorted(visible());
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = '';
+  document.getElementById('empty').hidden = rows.length>0;
 
-            document.getElementById('resetBtn').addEventListener('click', () => {
-                const regionSelect = document.getElementById('regionFilter');
-                regionSelect.selectedIndex = 0;
-                document.getElementById('competitivenessFilter').value = 'all';
-                document.getElementById('searchFilter').value = '';
-                updateDashboard();
-            });
-        }
+  [...hrow.children].forEach((th,i)=>{
+    if(COLS[i].k===state.sort){
+      th.setAttribute('aria-sort', state.dir===1?'ascending':'descending');
+      th.querySelector('.arrow').textContent = state.dir===1?'\u25B2':'\u25BC';
+    } else th.removeAttribute('aria-sort');
+  });
 
-        // Main Refresh Loop
-        function updateDashboard() {
-            const regionVal = document.getElementById('regionFilter').value;
-            const competitivenessVal = document.getElementById('competitivenessFilter').value;
-            const searchVal = document.getElementById('searchFilter').value.toLowerCase();
+  rows.forEach(d=>{
+    const tr = document.createElement('tr');
+    tr.className = 'row' + (state.active===d.id?' active':'');
+    tr.tabIndex = 0;
+    tr.setAttribute('aria-expanded', state.open===d.id);
+    tr.innerHTML = `
+      <td class="name"><span class="cid">${d.id}</span>${d.name}</td>
+      <td class="r num">${n0(d.jobs)}</td>
+      <td class="r num money">${usd(d.epw)}</td>
+      <td class="r num">${n1(d.est)}</td>
+      <td class="r"><span class="lqcell"><span class="num">${lq(d.lq25)}</span>${lqBar(d.lq25)}</span></td>
+      <td class="r chg ${d.chg>=0?'up':'dn'}"><span class="tri">${d.chg>=0?'\u25B2':'\u25BC'}</span> ${pct(d.chg)}</td>
+      <td><span class="badge" style="--b:${HEX[d.cls]};--bg:${d.cls==='Star'?'#F7EFD2':'transparent'}">${d.cls}</span></td>`;
+    const toggle = ()=>{ state.open = state.open===d.id ? null : d.id; state.active=d.id; render(); };
+    tr.onclick = toggle;
+    tr.onkeydown = e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } };
+    tr.onmouseenter = ()=> highlight(d.id);
+    tr.onmouseleave = ()=> highlight(state.active);
+    tb.appendChild(tr);
 
-            filteredRows = rawData.filter(row => {
-                const matchesRegion = row['SBDC Region'] === regionVal;
-                const matchesComp = (competitivenessVal === 'all') || (row['Competitiveness'] === competitivenessVal);
-                const matchesSearch = !searchVal || 
-                    (row['Cluster Name'] && row['Cluster Name'].toLowerCase().includes(searchVal));
-                return matchesRegion && matchesComp && matchesSearch;
-            });
+    if(state.open===d.id){
+      const share = d.jobs/TOTALS.jobs*100;
+      const perEst = d.jobs/d.est;
+      const dr = document.createElement('tr');
+      dr.className='detail';
+      dr.innerHTML = `<td colspan="${COLS.length}"><div class="panel">
+        <h3>${d.name}</h3>
+        <dl class="kv"><dt>SHARE OF REGIONAL JOBS</dt><dd>${share.toFixed(1)}% <em>of ${n0(TOTALS.jobs)}</em></dd></dl>
+        <dl class="kv"><dt>AVERAGE JOBS PER ESTABLISHMENT</dt><dd>${n1(perEst)}</dd></dl>
+        <dl class="kv"><dt>CONCENTRATION 2020 → 2025</dt><dd>${lq(d.lq20)} → ${lq(d.lq25)} <em>${pct(d.chg)}</em></dd></dl>
+        <dl class="kv"><dt>ANNUAL PAYROLL BASE</dt><dd>${usd(Math.round(d.jobs*d.epw))}</dd></dl>
+        <dl class="kv"><dt>CLASSIFICATION</dt><dd>${d.cls} <em>${CLASSES.find(c=>c.k===d.cls).note}</em></dd></dl>
+        <dl class="kv"><dt>VS NATIONAL SHARE</dt><dd>${d.lq25>=1 ? (((d.lq25-1)*100).toFixed(1)+'% above') : (((1-d.lq25)*100).toFixed(1)+'% below')}</dd></dl>
+      </div></td>`;
+      tb.appendChild(dr);
+    }
+  });
 
-            // KPIs
-            updateKPIs(filteredRows, regionVal);
+  stats(rows);
+  plot(rows);
+}
 
-            // Charts
-            renderJobsChart(filteredRows);
-            renderSpecializationChart(filteredRows);
-            renderQuadrantChart(filteredRows);
-            renderPieChart(filteredRows);
+function stats(rows){
+  const jobs = rows.reduce((a,d)=>a+d.jobs,0);
+  const est  = rows.reduce((a,d)=>a+d.est,0);
+  const pay  = rows.reduce((a,d)=>a+d.jobs*d.epw,0);
+  document.getElementById('s1').textContent = rows.length + ' of ' + DATA.length;
+  document.getElementById('s2').textContent = n0(jobs);
+  document.getElementById('s2b').textContent = (jobs/TOTALS.jobs*100).toFixed(0)+'% of regional total';
+  document.getElementById('s3').textContent = jobs ? usd(Math.round(pay/jobs)) : '—';
+  document.getElementById('s4').textContent = n0(est);
+  document.getElementById('s4b').textContent = (est/TOTALS.est*100).toFixed(0)+'% of regional total';
+}
 
-            // Table Rendering
-            renderTable();
-        }
+/* ---------- quadrant plot ---------- */
+const NS='http://www.w3.org/2000/svg';
+function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
 
-        // Fast update to adjust only charts text/grids dynamically on theme toggle
-        function updateDashboardChartsOnly() {
-            if (jobsChart) renderJobsChart(filteredRows);
-            if (specializationChart) renderSpecializationChart(filteredRows);
-            if (quadrantChart) renderQuadrantChart(filteredRows);
-            if (pieChart) renderPieChart(filteredRows);
-        }
+function plot(rows){
+  const svg = document.getElementById('plot');
+  [...svg.querySelectorAll(':scope > *:not(title)')].forEach(n=>n.remove());
+  const W=980,H=470,L=64,R=24,T=26,B=52;
+  const xmin=0, xmax=2.2, ymin=-0.45, ymax=0.20;
+  const X = v => L + (v-xmin)/(xmax-xmin)*(W-L-R);
+  const Y = v => T + (ymax-v)/(ymax-ymin)*(H-T-B);
+  const rad = j => 5 + Math.sqrt(j)/9;
 
-        // Update KPIs
-        function updateKPIs(data, selectedRegion) {
-            const totalJobs = data.reduce((acc, row) => acc + (row['2025 Jobs'] || 0), 0);
-            const totalEstablishments = data.reduce((acc, row) => acc + (row['Establishments'] || 0), 0);
-            const sumEarningsJobs = data.reduce((acc, row) => acc + ((row['Earnings Per Worker'] || 0) * (row['2025 Jobs'] || 0)), 0);
-            const avgEarnings = totalJobs > 0 ? (sumEarningsJobs / totalJobs) : 0;
+  const g = el('g',{});
+  svg.appendChild(g);
 
-            animateValue('kpiJobs', totalJobs, true);
-            animateValue('kpiEarnings', avgEarnings, true, true);
-            animateValue('kpiEstablishments', totalEstablishments, true);
-            document.getElementById('kpiEarningsSub').innerText = `Weighted Avg for ${selectedRegion}`;
-        }
+  [0,0.5,1.0,1.5,2.0].forEach(v=>{
+    g.appendChild(el('line',{x1:X(v),x2:X(v),y1:T,y2:H-B,class:v===1?'center-line':'axis-line',opacity:v===1?1:.35}));
+    g.appendChild(Object.assign(el('text',{x:X(v),y:H-B+18,class:'atick','text-anchor':'middle'}),{textContent:v.toFixed(1)}));
+  });
+  [-0.4,-0.2,0,0.2].forEach(v=>{
+    g.appendChild(el('line',{x1:L,x2:W-R,y1:Y(v),y2:Y(v),class:v===0?'center-line':'axis-line',opacity:v===0?1:.35}));
+    g.appendChild(Object.assign(el('text',{x:L-10,y:Y(v)+4,class:'atick','text-anchor':'end'}),{textContent:(v*100).toFixed(0)+'%'}));
+  });
 
-        function animateValue(id, value, isInteger = false, isCurrency = false) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            const duration = 400;
-            const startTime = performance.now();
-            const startVal = parseFloat(el.innerText.replace(/[^0-9.-]+/g, '')) || 0;
-            const endVal = value;
+  g.appendChild(Object.assign(el('text',{x:(L+W-R)/2,y:H-10,class:'atitle','text-anchor':'middle'}),
+    {textContent:'2025 employment concentration (1.00 = national share)'}));
+  const yt = el('text',{x:16,y:(T+H-B)/2,class:'atitle','text-anchor':'middle',transform:`rotate(-90 16 ${(T+H-B)/2})`});
+  yt.textContent='Change in concentration, 2020–2025'; g.appendChild(yt);
 
-            function update(time) {
-                const elapsed = time - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const easeProgress = 1 - Math.pow(1 - progress, 3);
-                const currentVal = startVal + (endVal - startVal) * easeProgress;
+  const quads = [
+    {t:'EMERGING', x:L+12, y:T+18, a:'start'},
+    {t:'STAR',     x:W-R-12, y:T+18, a:'end'},
+    {t:'TRANSFORMING', x:L+12, y:H-B-12, a:'start'},
+    {t:'MATURE',   x:W-R-12, y:H-B-12, a:'end'}
+  ];
+  quads.forEach(qd=>g.appendChild(Object.assign(el('text',{x:qd.x,y:qd.y,class:'qlabel','text-anchor':qd.a}),{textContent:qd.t})));
 
-                let formatted = '';
-                if (isCurrency) {
-                    formatted = '$' + Math.round(currentVal).toLocaleString();
-                } else if (isInteger) {
-                    formatted = Math.round(currentVal).toLocaleString();
-                } else {
-                    formatted = currentVal.toFixed(1).toLocaleString();
-                }
-                el.innerText = formatted;
+  const shown = new Set(rows.map(r=>r.id));
+  DATA.slice().sort((a,b)=>b.jobs-a.jobs).forEach(d=>{
+    const on = shown.has(d.id);
+    const gp = el('g',{class:'pt'+(on?'':' dim')+(state.active===d.id?' active':''), 'data-id':d.id, tabindex:on?0:-1, role:'button'});
+    gp.appendChild(el('circle',{cx:X(d.lq25),cy:Y(d.chg),r:rad(d.jobs),fill:HEX[d.cls],'fill-opacity':.9}));
+    const tt = el('title',{}); tt.textContent = `${d.name} — ${n0(d.jobs)} jobs, LQ ${lq(d.lq25)}, ${pct(d.chg)}`;
+    gp.appendChild(tt);
+    if(on && d.jobs>25000){
+      const tx = el('text',{x:X(d.lq25), y:Y(d.chg)-rad(d.jobs)-6, class:'plabel','text-anchor':'middle'});
+      tx.textContent = d.id; gp.appendChild(tx);
+    }
+    if(on){
+      gp.onclick = ()=>{ state.open=d.id; state.active=d.id; render();
+        document.querySelector('tr.row.active')?.scrollIntoView({block:'center',behavior:'smooth'}); };
+      gp.onkeydown = e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); gp.onclick(); } };
+      gp.onmouseenter = ()=>highlight(d.id);
+      gp.onmouseleave = ()=>highlight(state.active);
+    }
+    g.appendChild(gp);
+  });
+}
 
-                if (progress < 1) {
-                    requestAnimationFrame(update);
-                } else {
-                    el.innerText = isCurrency ? '$' + Math.round(endVal).toLocaleString() : Math.round(endVal).toLocaleString();
-                }
-            }
-            requestAnimationFrame(update);
-        }
+function highlight(id){
+  document.querySelectorAll('.pt').forEach(p=>p.classList.toggle('active', p.dataset.id===id));
+}
 
-        // Render Chart 1: Jobs Horizontal Bar
-        function renderJobsChart(data) {
-            const ctx = document.getElementById('jobsChart').getContext('2d');
-            const sorted = [...data].sort((a, b) => b['2025 Jobs'] - a['2025 Jobs']);
-            
-            const labels = sorted.map(d => d['Cluster Name'].length > 32 ? d['Cluster Name'].substring(0, 30) + '...' : d['Cluster Name']);
-            const fullLabels = sorted.map(d => d['Cluster Name']);
-            const jobsData = sorted.map(d => d['2025 Jobs']);
-            const backgroundColors = sorted.map(d => getCompColor(d['Competitiveness'], 0.75));
-            const borderColors = sorted.map(d => getCompColor(d['Competitiveness'], 1.0));
-
-            if (jobsChart) {
-                jobsChart.destroy();
-            }
-
-            const activeDark = isDarkActive();
-
-            jobsChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Projected Jobs (2025)',
-                        data: jobsData,
-                        backgroundColor: backgroundColors,
-                        borderColor: borderColors,
-                        borderWidth: 1,
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                title: function(context) {
-                                    return fullLabels[context[0].dataIndex];
-                                },
-                                label: function(context) {
-                                    return ` Jobs: ${Math.round(context.raw).toLocaleString()}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: { color: activeDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)' },
-                            ticks: { color: activeDark ? '#cbd5e1' : '#475569', font: { size: 10 } }
-                        },
-                        y: {
-                            grid: { display: false },
-                            ticks: { color: activeDark ? '#cbd5e1' : '#475569', font: { size: 10 } }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Render Chart 2: Specialization Trend
-        function renderSpecializationChart(data) {
-            const ctx = document.getElementById('specializationChart').getContext('2d');
-            const sorted = [...data].sort((a, b) => b['2025 Jobs'] - a['2025 Jobs']).slice(0, 8);
-            
-            const labels = sorted.map(d => d['Cluster Name'].length > 15 ? d['Cluster Name'].substring(0, 13) + '...' : d['Cluster Name']);
-            const fullNames = sorted.map(d => d['Cluster Name']);
-            const lq2020 = sorted.map(d => d['2020 Employment Concentration']);
-            const lq2025 = sorted.map(d => d['2025 Employment Concentration']);
-
-            if (specializationChart) {
-                specializationChart.destroy();
-            }
-
-            const activeDark = isDarkActive();
-
-            specializationChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: '2020 LQ',
-                            data: lq2020,
-                            backgroundColor: 'rgba(207, 185, 145, 0.35)',
-                            borderColor: '#CFB991',
-                            borderWidth: 1,
-                            borderRadius: 3
-                        },
-                        {
-                            label: '2025 LQ',
-                            data: lq2025,
-                            backgroundColor: 'rgba(209, 161, 83, 0.85)',
-                            borderColor: '#D1A153',
-                            borderWidth: 1,
-                            borderRadius: 3
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: { color: activeDark ? '#cbd5e1' : '#475569', font: { size: 11 } }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                title: function(context) {
-                                    return fullNames[context[0].dataIndex];
-                                },
-                                label: function(context) {
-                                    return ` Location Quotient: ${context.raw.toFixed(2)}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: activeDark ? '#cbd5e1' : '#475569', font: { size: 10 } }
-                        },
-                        y: {
-                            grid: { color: activeDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)' },
-                            ticks: { color: activeDark ? '#cbd5e1' : '#475569' },
-                            title: {
-                                display: true,
-                                text: 'Employment Concentration (LQ)',
-                                color: activeDark ? '#94a3b8' : '#64748b',
-                                font: { size: 10 }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Render Chart 3: Quadrant Bubble Landscape (IDs completely omitted)
-        function renderQuadrantChart(data) {
-            const ctx = document.getElementById('quadrantChart').getContext('2d');
-            const categories = ['Star', 'Emerging', 'Mature', 'Transforming'];
-            
-            const jobsArr = data.map(d => d['2025 Jobs'] || 0);
-            const maxJobs = Math.max(...jobsArr, 1);
-            const minJobs = Math.min(...jobsArr, 0);
-
-            const datasets = categories.map(cat => {
-                const catData = data.filter(d => d['Competitiveness'] === cat);
-                return {
-                    label: cat,
-                    data: catData.map(d => {
-                        let r = 6;
-                        if (maxJobs > minJobs) {
-                            r = 5 + (((d['2025 Jobs'] || 0) - minJobs) / (maxJobs - minJobs)) * 20;
-                        }
-                        return {
-                            x: d['2025 Employment Concentration'] || 0,
-                            y: d['Percent Change Employment Concentration'] || 0,
-                            r: r,
-                            label: d['Cluster Name'],
-                            jobs: d['2025 Jobs'] || 0
-                        };
-                    }),
-                    backgroundColor: getCompColor(cat, 0.7),
-                    borderColor: getCompColor(cat, 1.0),
-                    borderWidth: 1.5,
-                    hoverRadius: 8
-                };
-            });
-
-            if (quadrantChart) {
-                quadrantChart.destroy();
-            }
-
-            const activeDark = isDarkActive();
-
-            quadrantChart = new Chart(ctx, {
-                type: 'bubble',
-                data: { datasets: datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: { color: activeDark ? '#cbd5e1' : '#475569', font: { size: 11, weight: '500' } }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const p = context.raw;
-                                    const pctStr = (p.y * 100).toFixed(1) + '%';
-                                    return [
-                                        `${p.label}`,
-                                        `  2025 LQ: ${p.x.toFixed(2)}`,
-                                        `  Change in Concentration: ${pctStr}`,
-                                        `  2025 Jobs: ${Math.round(p.jobs).toLocaleString()}`
-                                    ];
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: { color: activeDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },
-                            ticks: { color: activeDark ? '#cbd5e1' : '#475569' },
-                            title: {
-                                display: true,
-                                text: 'Employment Specialization (2025 Location Quotient)',
-                                color: activeDark ? '#94a3b8' : '#64748b',
-                                font: { size: 11 }
-                            }
-                        },
-                        y: {
-                            grid: { color: activeDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },
-                            ticks: {
-                                color: activeDark ? '#cbd5e1' : '#475569',
-                                callback: function(value) { return (value * 100).toFixed(0) + '%'; }
-                            },
-                            title: {
-                                display: true,
-                                text: 'Concentration Percent Change',
-                                color: activeDark ? '#94a3b8' : '#64748b',
-                                font: { size: 11 }
-                            }
-                        }
-                    }
-                },
-                plugins: [{
-                    id: 'quadrantDecorations',
-                    afterDraw: function(chart) {
-                        const chartCtx = chart.ctx;
-                        const xAxis = chart.scales.x;
-                        const yAxis = chart.scales.y;
-                        
-                        chartCtx.save();
-                        chartCtx.strokeStyle = isDarkActive() ? 'rgba(207, 185, 145, 0.4)' : 'rgba(166, 121, 12, 0.3)';
-                        chartCtx.lineWidth = 1.5;
-                        chartCtx.setLineDash([5, 5]);
-                        
-                        // Vertical LQ line = 1.0
-                        const xPixel = xAxis.getPixelForValue(1.0);
-                        if (xPixel >= xAxis.left && xPixel <= xAxis.right) {
-                            chartCtx.beginPath();
-                            chartCtx.moveTo(xPixel, yAxis.top);
-                            chartCtx.lineTo(xPixel, yAxis.bottom);
-                            chartCtx.stroke();
-                        }
-                        
-                        // Horizontal concentration line = 0%
-                        const yPixel = yAxis.getPixelForValue(0.0);
-                        if (yPixel >= yAxis.top && yPixel <= yAxis.bottom) {
-                            chartCtx.beginPath();
-                            chartCtx.moveTo(xAxis.left, yPixel);
-                            chartCtx.lineTo(xAxis.right, yPixel);
-                            chartCtx.stroke();
-                        }
-                        
-                        // Overlays text
-                        chartCtx.setLineDash([]);
-                        chartCtx.font = 'bold 10px Inter, sans-serif';
-                        chartCtx.fillStyle = isDarkActive() ? 'rgba(255, 255, 255, 0.35)' : 'rgba(15, 23, 42, 0.4)';
-                        
-                        chartCtx.fillText('★ STAR (LQ > 1, Growing)', xAxis.right - 150, yAxis.top + 20);
-                        chartCtx.fillText('▲ EMERGING (LQ < 1, Growing)', xAxis.left + 15, yAxis.top + 20);
-                        chartCtx.fillText('● MATURE (LQ > 1, Declining)', xAxis.right - 150, yAxis.bottom - 15);
-                        chartCtx.fillText('■ TRANSFORMING (LQ < 1, Declining)', xAxis.left + 15, yAxis.bottom - 15);
-                        
-                        chartCtx.restore();
-                    }
-                }]
-            });
-        }
-
-        // Render Chart 4: Competitiveness Doughnut
-        function renderPieChart(filteredRows) {
-            const ctx = document.getElementById('pieChart').getContext('2d');
-            const counts = { 'Star': 0, 'Emerging': 0, 'Mature': 0, 'Transforming': 0 };
-            
-            filteredRows.forEach(row => {
-                const comp = row['Competitiveness'];
-                if (counts.hasOwnProperty(comp)) {
-                    counts[comp]++;
-                }
-            });
-
-            if (pieChart) {
-                pieChart.destroy();
-            }
-
-            const activeDark = isDarkActive();
-
-            pieChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(counts),
-                    datasets: [{
-                        data: Object.values(counts),
-                        backgroundColor: [
-                            colors.star,
-                            colors.emerging,
-                            colors.mature,
-                            colors.transforming
-                        ],
-                        borderWidth: 2,
-                        borderColor: activeDark ? '#111c30' : '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                color: activeDark ? '#cbd5e1' : '#475569',
-                                boxWidth: 12,
-                                font: { size: 11 }
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const val = context.raw;
-                                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                                    return ` ${context.label}: ${val} (${pct}%)`;
-                                }
-                            }
-                        }
-                    },
-                    cutout: '65%'
-                }
-            });
-        }
-
-        // Table Sort & Render logic - Always showing exactly 21 active clusters per region (No external IDs shown)
-        function handleSort(columnName) {
-            const mapping = {
-                'Cluster Name': 'Cluster Name',
-                'SBDC Region': 'SBDC Region',
-                '2025 Jobs': '2025 Jobs',
-                'Earnings Per Worker': 'Earnings Per Worker',
-                'Establishments': 'Establishments',
-                '2025 Employment Concentration': '2025 Employment Concentration',
-                'Competitiveness': 'Competitiveness'
-            };
-
-            const key = mapping[columnName];
-            if (sortColumn === key) {
-                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortColumn = key;
-                sortDirection = 'desc';
-            }
-            renderTable();
-        }
-
-        function renderTable() {
-            // Sort filteredRows
-            const sorted = [...filteredRows].sort((a, b) => {
-                let valA = a[sortColumn];
-                let valB = b[sortColumn];
-
-                if (typeof valA === 'string') {
-                    return sortDirection === 'asc' 
-                        ? valA.localeCompare(valB) 
-                        : valB.localeCompare(valA);
-                } else {
-                    valA = valA || 0;
-                    valB = valB || 0;
-                    return sortDirection === 'asc' ? valA - valB : valB - valA;
-                }
-            });
-
-            document.getElementById('tableRecordCount').innerText = `${sorted.length} Records Shown`;
-
-            // Reset sort icons
-            const columns = ['Cluster Name', 'SBDC Region', '2025 Jobs', 'Earnings Per Worker', 'Establishments', '2025 Employment Concentration', 'Competitiveness'];
-            columns.forEach(col => {
-                const cleanId = col.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
-                const indicatorEl = document.getElementById(`sort-icon-${cleanId}`);
-                if (indicatorEl) {
-                    if (sortColumn === col) {
-                        indicatorEl.innerHTML = sortDirection === 'asc' ? '▲' : '▼';
-                        indicatorEl.className = 'text-[#C28E0E] dark:text-[#CFB991] text-[9px]';
-                    } else {
-                        indicatorEl.innerHTML = '↕';
-                        indicatorEl.className = 'text-slate-400 dark:text-slate-500 text-[10px] opacity-40';
-                    }
-                }
-            });
-
-            const tableBody = document.getElementById('tableBody');
-            tableBody.innerHTML = '';
-
-            if (sorted.length === 0) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="p-8 text-center text-slate-500 italic">
-                            No matching industry records found. Try adjusting your filters.
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            sorted.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-100 dark:hover:bg-[#16243d]/40 transition-colors border-b border-slate-200 dark:border-slate-800/80';
-
-                let badgeClass = 'bg-slate-200 text-slate-700 dark:bg-slate-700/20 dark:text-slate-300 border-slate-300 dark:border-slate-600/30';
-                if (row['Competitiveness'] === 'Star') badgeClass = 'bg-[#D1A153]/15 text-[#A6790C] dark:text-[#D1A153] border-[#D1A153]/30';
-                if (row['Competitiveness'] === 'Emerging') badgeClass = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
-                if (row['Competitiveness'] === 'Mature') badgeClass = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
-                if (row['Competitiveness'] === 'Transforming') badgeClass = 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
-
-                tr.innerHTML = `
-                    <td class="p-4 font-semibold text-slate-900 dark:text-white max-w-[280px] truncate" title="${row['Cluster Name']}">${row['Cluster Name']}</td>
-                    <td class="p-4 text-slate-500 dark:text-slate-400 text-xs">${row['SBDC Region']}</td>
-                    <td class="p-4 text-right font-medium text-slate-900 dark:text-slate-200">${Math.round(row['2025 Jobs']).toLocaleString()}</td>
-                    <td class="p-4 text-right text-slate-600 dark:text-slate-300 font-mono text-xs">$${Math.round(row['Earnings Per Worker']).toLocaleString()}</td>
-                    <td class="p-4 text-right text-slate-600 dark:text-slate-300">${Math.round(row['Establishments']).toLocaleString()}</td>
-                    <td class="p-4 text-right font-semibold text-[#C28E0E] dark:text-[#CFB991] font-mono">${row['2025 Employment Concentration'].toFixed(2)}</td>
-                    <td class="p-4 text-center">
-                        <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full border ${badgeClass}">
-                            ${row['Competitiveness']}
-                        </span>
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-            });
-        }
-
-        // Helper color utility
-        function getCompColor(comp, alpha = 1.0) {
-            const hex = colors[comp.toLowerCase()] || '#94a3b8';
-            if (alpha === 1.0) return hex;
-            const r = parseInt(hex.slice(1, 3), 16);
-            const g = parseInt(hex.slice(3, 5), 16);
-            const b = parseInt(hex.slice(5, 7), 16);
-            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        }
-    </script>
+function syncSticky(){
+  const h = document.querySelector('.controls').getBoundingClientRect().height;
+  document.documentElement.style.setProperty('--ctrlH', Math.round(h)+'px');
+}
+window.addEventListener('resize', syncSticky);
+syncSticky();
+render();
+</script>
 </body>
 </html>
